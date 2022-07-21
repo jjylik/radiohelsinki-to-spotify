@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Radio Helsinki to Spotify</title>
+  </head>
+  <body style="font-size: 3rem">
+    <div
+      style="
+        display: flex;
+        gap: 10vh;
+        margin-top: 10vh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <button id="create-playlists" style="font-size: 3rem" disabled onclick="onCreatePlaylists()">
+        Create playlists
+      </button>
+      <a href="/auth">Login to Spotify</a>
+    </div>
+    <script>
+      // W3Schools https://www.w3schools.com/js/js_cookies.asp
+      function getCookie(cname) {
+        const name = cname + "=";
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const ca = decodedCookie.split(";");
+        for (let i = 0; i < ca.length; i++) {
+          let c = ca[i];
+          while (c.charAt(0) == " ") {
+            c = c.substring(1);
+          }
+          if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+          }
+        }
+        return "";
+      }
+      function togglePlaylistButton() {
+        const element = document.querySelector("#create-playlists");
+        element.disabled = !element.disabled;
+      }
+      function setPlaylistButtonColor(color) {
+        const element = document.querySelector("#create-playlists");
+        element.style.background = color;
+      }
+      async function getPlaylists() {
+        togglePlaylistButton();
+        const response = await fetch("/playlists", {
+          method: "POST",
+        });
+        togglePlaylistButton();
+        setPlaylistButtonColor(response.ok ? "green" : "red");
+      }
+      function onCreatePlaylists() {
+        onCreatePlaylists();
+      }
+      if (getCookie("sessionid")) {
+        togglePlaylistButton();
+      }
+    </script>
+  </body>
+</html>
