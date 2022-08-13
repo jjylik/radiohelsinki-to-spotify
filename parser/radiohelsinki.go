@@ -13,12 +13,12 @@ import (
 func ParsePlaylistFromRadioHelsinki() (*[]playlist.Playlist, error) {
 	res, err := http.Get("http://www.radiohelsinki.fi/ohjelma/henri-pulkkinen/")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return nil, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
+		log.Printf("status code error: %d %s", res.StatusCode, res.Status)
 	}
 
 	return ParsePlaylists(res.Body)
@@ -27,7 +27,7 @@ func ParsePlaylistFromRadioHelsinki() (*[]playlist.Playlist, error) {
 func ParsePlaylists(document io.Reader) (*[]playlist.Playlist, error) {
 	doc, err := goquery.NewDocumentFromReader(document)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return nil, err
 	}
 	var playlists []playlist.Playlist

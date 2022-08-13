@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -50,12 +51,12 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	tok, err := auth.Token(r.Context(), spotifyAuthState, r)
 	if err != nil {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 	if st := r.FormValue("state"); st != spotifyAuthState {
 		http.NotFound(w, r)
-		log.Fatalf("State mismatch: %s != %s\n", st, spotifyAuthState)
+		log.Printf("State mismatch: %s != %s\n", st, spotifyAuthState)
 		return
 	}
 	sessionToken := uuid.New().String()
@@ -73,7 +74,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 func GetPlaylistNames(client *spotify.Client, userID string) ([]string, error) {
 	spotifyPlaylists, err := client.GetPlaylistsForUser(context.Background(), userID)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return nil, err
 	}
 	var playlistNames []string
@@ -83,33 +84,66 @@ func GetPlaylistNames(client *spotify.Client, userID string) ([]string, error) {
 	return playlistNames, nil
 }
 
+func AppendToPlaylist(client *spotify.Client, userID string, playlist playlist.Playlist) error {
+	spotifyPlaylists, err := client.GetPlaylistsForUser(context.Background(), userID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	var playlistID spotify.ID
+	for _, spotifyPlaylist := range spotifyPlaylists.Playlists {
+		if strings.EqualFold(spotifyPlaylist.Name, playlist.Name) {
+			playlistID = spotifyPlaylist.ID
+			break
+		}
+	}
+	if playlistID == "" {
+		newPlaylist, err := client.CreatePlaylistForUser(context.Background(), userID, playlist.Name, playlist.Name, false, false)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		playlistID = newPlaylist.ID
+	}
+	return addTracksToPlaylist(playlist, playlistID, client)
+}
+
 func CreatePlaylists(client *spotify.Client, userID string, newPlaylists []playlist.Playlist) error {
 	for _, playlist := range newPlaylists {
 		newPlaylist, err := client.CreatePlaylistForUser(context.Background(), userID, playlist.Name, playlist.Name, false, false)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return err
 		}
-		trackIDs := []spotify.ID{}
-		for _, track := range playlist.Tracks {
-			query := track.Name + " artist:" + track.Artist
-			searchResult, err := client.Search(context.Background(), query, spotify.SearchTypeTrack)
-			if err != nil {
-				log.Fatal(err)
-				return err
-			}
-			foundTrack := searchResult.Tracks.Tracks
-			if len(foundTrack) == 0 {
-				log.Println("Could not find track:", track.Name, track.Artist)
-			} else {
-				trackIDs = append(trackIDs, foundTrack[0].ID)
-			}
-		}
-		_, err = client.AddTracksToPlaylist(context.Background(), newPlaylist.ID, trackIDs...)
+		err = addTracksToPlaylist(playlist, newPlaylist.ID, client)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return err
 		}
+	}
+	return nil
+}
+
+func addTracksToPlaylist(playlist playlist.Playlist, spotifyID spotify.ID, client *spotify.Client) error {
+	trackIDs := []spotify.ID{}
+	for _, track := range playlist.Tracks {
+		query := track.Name + " artist:" + track.Artist
+		searchResult, err := client.Search(context.Background(), query, spotify.SearchTypeTrack)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		foundTrack := searchResult.Tracks.Tracks
+		if len(foundTrack) == 0 {
+			log.Println("Could not find track:", track.Name, track.Artist)
+		} else {
+			trackIDs = append(trackIDs, foundTrack[0].ID)
+		}
+	}
+	_, err := client.AddTracksToPlaylist(context.Background(), spotifyID, trackIDs...)
+	if err != nil {
+		log.Println(err)
+		return err
 	}
 	return nil
 }

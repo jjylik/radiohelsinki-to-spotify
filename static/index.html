@@ -18,6 +18,24 @@
       <button id="create-playlists" style="font-size: 3rem" disabled onclick="onCreatePlaylists()">
         Create playlists
       </button>
+      <form action="/custom-playlist" method="post">
+        <div>
+          <label style="font-size: 2rem" for="name">Name</label>
+          <input type="text" name="name" id="name"></input>
+        </div>
+        <div>
+          <textarea
+          required
+          rows="30"
+          cols="50"
+          placeholder="artist: track&#10;artist: track"
+          name="tracks" id="tracks"></textarea>
+        </div>
+        <div>
+          <input id="submit-custom-playlist" disabled type="submit" value="Create custom playlist">
+        </div>
+      </form>
+      
       <a href="/auth">Login to Spotify</a>
     </div>
     <script>
@@ -38,8 +56,10 @@
         return "";
       }
       function togglePlaylistButton() {
-        const element = document.querySelector("#create-playlists");
-        element.disabled = !element.disabled;
+        ["create-playlists", "submit-custom-playlist"].forEach(id => {
+          const element = document.querySelector(`#${id}`);
+          element.disabled = !element.disabled;
+        });
       }
       function setPlaylistButtonColor(color) {
         const element = document.querySelector("#create-playlists");
